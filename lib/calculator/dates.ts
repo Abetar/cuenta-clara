@@ -12,7 +12,10 @@ export function parseLocalDate(value: string): Date {
   return new Date(year, month - 1, day, 12, 0, 0, 0);
 }
 
-export function differenceInDays(start: Date, end: Date): number {
+export function differenceInDays(
+  start: Date,
+  end: Date,
+): number {
   const utcStart = Date.UTC(
     start.getFullYear(),
     start.getMonth(),
@@ -25,21 +28,31 @@ export function differenceInDays(start: Date, end: Date): number {
     end.getDate(),
   );
 
-  return Math.floor((utcEnd - utcStart) / MS_PER_DAY);
+  return Math.floor(
+    (utcEnd - utcStart) / MS_PER_DAY,
+  );
 }
 
 export function inclusiveDaysBetween(
   start: Date,
   end: Date,
 ): number {
-  return Math.max(0, differenceInDays(start, end) + 1);
+  return Math.max(
+    0,
+    differenceInDays(start, end) + 1,
+  );
 }
 
 export function isLeapYear(year: number): boolean {
-  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  return (
+    year % 4 === 0 &&
+    (year % 100 !== 0 || year % 400 === 0)
+  );
 }
 
-export function getDaysInYear(year: number): number {
+export function getDaysInYear(
+  year: number,
+): number {
   return isLeapYear(year) ? 366 : 365;
 }
 
@@ -47,7 +60,8 @@ export function getCompletedYears(
   start: Date,
   end: Date,
 ): number {
-  let years = end.getFullYear() - start.getFullYear();
+  let years =
+    end.getFullYear() - start.getFullYear();
 
   const anniversary = new Date(
     end.getFullYear(),
@@ -67,7 +81,8 @@ export function getLastAnniversary(
   start: Date,
   end: Date,
 ): Date {
-  const completedYears = getCompletedYears(start, end);
+  const completedYears =
+    getCompletedYears(start, end);
 
   return new Date(
     start.getFullYear() + completedYears,
@@ -81,7 +96,8 @@ export function getNextAnniversary(
   start: Date,
   end: Date,
 ): Date {
-  const lastAnniversary = getLastAnniversary(start, end);
+  const lastAnniversary =
+    getLastAnniversary(start, end);
 
   return new Date(
     lastAnniversary.getFullYear() + 1,
@@ -101,25 +117,45 @@ export function calculateEmploymentPeriod(
     );
   }
 
-  const totalDays = inclusiveDaysBetween(start, end);
-
   /*
-   * 365.2425 evita tratar todos los años como exactamente 365 días
-   * al obtener una antigüedad decimal.
+   * Para antigüedad usamos tiempo realmente
+   * transcurrido entre fechas.
+   *
+   * Ejemplo:
+   * 09/06/2025 → 09/06/2026 = 365 días,
+   * no 366.
    */
-  const exactYears = totalDays / 365.2425;
-
-  const completedYears = getCompletedYears(start, end);
-
-  const currentServiceYearStart = getLastAnniversary(start, end);
-
-  const nextAnniversary = getNextAnniversary(start, end);
-
-  const daysInCurrentServiceYear = inclusiveDaysBetween(
-    currentServiceYearStart,
-    end,
+  const totalDays = Math.max(
+    0,
+    differenceInDays(start, end),
   );
 
+  const completedYears =
+    getCompletedYears(start, end);
+
+  const currentServiceYearStart =
+    getLastAnniversary(start, end);
+
+  const nextAnniversary =
+    getNextAnniversary(start, end);
+
+  /*
+   * También usamos diferencia real para saber
+   * cuánto ha transcurrido del año de servicio
+   * actual.
+   */
+  const daysInCurrentServiceYear = Math.max(
+    0,
+    differenceInDays(
+      currentServiceYearStart,
+      end,
+    ),
+  );
+
+  /*
+   * Esto permite que el denominador sea 365 o
+   * 366 dependiendo del año de servicio real.
+   */
   const currentServiceYearLength = Math.max(
     1,
     differenceInDays(
@@ -127,6 +163,21 @@ export function calculateEmploymentPeriod(
       nextAnniversary,
     ),
   );
+
+  /*
+   * Antigüedad decimal basada en aniversarios:
+   *
+   * años completos
+   * +
+   * fracción transcurrida del año actual.
+   *
+   * Es más preciso que dividir todos los días
+   * entre una constante como 365.2425.
+   */
+  const exactYears =
+    completedYears +
+    daysInCurrentServiceYear /
+      currentServiceYearLength;
 
   return {
     exactYears,
@@ -154,6 +205,13 @@ export function getCalendarYearWorkPeriod(
       ? employmentStart
       : calendarYearStart;
 
+  /*
+   * Para aguinaldo sí conservamos el conteo
+   * inclusivo de días trabajados.
+   *
+   * Esto es deliberado y distinto al cálculo
+   * de antigüedad.
+   */
   const daysWorked = inclusiveDaysBetween(
     effectiveStart,
     employmentEnd,
@@ -162,6 +220,8 @@ export function getCalendarYearWorkPeriod(
   return {
     effectiveStart,
     daysWorked,
-    daysInYear: getDaysInYear(employmentEnd.getFullYear()),
+    daysInYear: getDaysInYear(
+      employmentEnd.getFullYear(),
+    ),
   };
 }

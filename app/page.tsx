@@ -58,7 +58,7 @@ interface SavedCalculatorState {
 }
 
 const STORAGE_KEY =
-  "cuenta-clara-calculator-v1";
+  "cuenta-clara-calculator-v2";
 
 const initialFormData: CalculatorFormData = {
   monthlySalary: 0,
